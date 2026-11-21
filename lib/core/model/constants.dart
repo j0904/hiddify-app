@@ -12,6 +12,11 @@ abstract class Constants {
   static const vpnSubscriptionUrl = "https://s3.bigt.ai/apps/dai/vpn/subscription.txt";
   static const vpnFreeProfilesUrl = "https://s3.bigt.ai/apps/dai/vpn/free-profiles.json";
   static const vpnProfileName = "bigt.ai VPN";
+
+  /// dai-style OTA manifest for this client (same schema family as deploy.apk.sh:
+  /// versionName/versionCode + per-ABI assets with a sha256), published by
+  /// scripts/hiddify-vpn-ota.sh.
+  static const updateManifestUrl = "https://s3.bigt.ai/apps/dai/vpn/apk/latest.json";
   static const githubUrl = "https://github.com/hiddify/hiddify-next";
   static const licenseUrl = "https://github.com/hiddify/hiddify-next?tab=License-1-ov-file#readme";
   static const githubReleasesApiUrl = "https://api.github.com/repos/hiddify/hiddify-app/releases";
