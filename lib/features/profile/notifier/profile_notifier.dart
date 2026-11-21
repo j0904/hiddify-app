@@ -7,6 +7,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:hiddify/core/haptic/haptic_service.dart';
 import 'package:hiddify/core/http_client/http_client_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/core/model/failures.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
@@ -254,30 +255,38 @@ class FreeProfilesNotifier extends _$FreeProfilesNotifier with AppLogger {
 
   @override
   Future<List<FreeProfile>> build() async {
+    final lists = await Future.wait([
+      _download(Constants.vpnFreeProfilesUrl),
+      _download(_url),
+    ]);
+    return [...lists[0], ...lists[1]];
+  }
+
+  /// The core first, as for a subscription: it trusts the roots it ships, which
+  /// an old Android (7.0 has no ISRG Root X1) lacks, and it does not take a
+  /// filter's reset of Dart's handshake. Either endpoint failing returns an
+  /// empty list so the other catalog still renders.
+  Future<List<FreeProfile>> _download(String url) async {
     final httpClient = ref.watch(httpClientProvider);
     final core = ref.watch(hiddifyCoreServiceProvider);
-
-    // The core first, as for a subscription: it trusts the roots it ships, which an old Android
-    // (7.0 has no ISRG Root X1) lacks, and it does not take a filter's reset of Dart's handshake.
     try {
-      final rs = await core.fetchUrl(_url, userAgent: httpClient.userAgent, timeout: const Duration(seconds: 30));
+      final rs = await core.fetchUrl(url, userAgent: httpClient.userAgent, timeout: const Duration(seconds: 30));
       if (rs.error == FetchUrlError.FETCH_URL_ERROR_NONE && rs.statusCode == 200) {
         return _parse(utf8.decode(rs.body));
       }
       loggy.warning(
-        'core download of the free profiles failed: ${rs.error == FetchUrlError.FETCH_URL_ERROR_NONE ? 'HTTP ${rs.statusCode}' : '${rs.error.name} ${rs.errorDetail}'}',
+        'core download of the free profiles failed: $url ${rs.error == FetchUrlError.FETCH_URL_ERROR_NONE ? 'HTTP ${rs.statusCode}' : '${rs.error.name} ${rs.errorDetail}'}',
       );
     } catch (e, st) {
-      loggy.warning('core download of the free profiles failed', e, st);
+      loggy.warning('core download of the free profiles failed: $url', e, st);
     }
 
     try {
-      final res = await httpClient.get(_url);
+      final res = await httpClient.get(url);
       if (res.statusCode == 200) return _parse(res.data.toString());
-      loggy.error('download of the free profiles failed: HTTP ${res.statusCode}');
+      loggy.error('download of the free profiles failed: $url HTTP ${res.statusCode}');
     } catch (e, st) {
-      loggy.error('download of the free profiles failed', e, st);
-      rethrow;
+      loggy.error('download of the free profiles failed: $url', e, st);
     }
     return <FreeProfile>[];
   }

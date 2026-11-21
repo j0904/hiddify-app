@@ -4,6 +4,14 @@ import 'package:hiddify/utils/utils.dart';
 
 abstract class Constants {
   static const appName = "Hiddify";
+
+  // bigt.ai VPN fleet: container/deployvpn.sh publishes these objects under
+  // `apps/dai/vpn/`, so adding/removing a host needs no app or dai release. The
+  // app seeds the subscription on a fresh install and lists it as a free
+  // profile for re-adding.
+  static const vpnSubscriptionUrl = "https://s3.bigt.ai/apps/dai/vpn/subscription.txt";
+  static const vpnFreeProfilesUrl = "https://s3.bigt.ai/apps/dai/vpn/free-profiles.json";
+  static const vpnProfileName = "bigt.ai VPN";
   static const githubUrl = "https://github.com/hiddify/hiddify-next";
   static const licenseUrl = "https://github.com/hiddify/hiddify-next?tab=License-1-ov-file#readme";
   static const githubReleasesApiUrl = "https://api.github.com/repos/hiddify/hiddify-app/releases";

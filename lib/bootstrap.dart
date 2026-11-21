@@ -15,6 +15,7 @@ import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/logger/crash/app_crash_store.dart';
 import 'package:hiddify/core/logger/logger.dart';
 import 'package:hiddify/core/logger/logger_setup.dart';
+import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/core/model/environment.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/core/preferences/preferences_migration.dart';
@@ -27,6 +28,7 @@ import 'package:hiddify/features/chain/notifier/chain_profile_notifier.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/log/data/log_data_providers.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
+import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/system_tray/notifier/system_tray_notifier.dart';
@@ -127,6 +129,32 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
     () => container.read(chainProfileNotifierProvider(ChainType.unblocker).future),
   );
   await _safeInit("hiddify-core", () => container.read(hiddifyCoreServiceProvider).init());
+
+  // Fresh install: seed the bigt.ai VPN subscription so the app is usable
+  // without pasting a link. Must run after the core init — upsertRemote parses
+  // the profile and applies config options through HiddifyCoreService, which
+  // is not answering before this point. Runs once (the flag is set after
+  // success), skips a device that already has profiles, and never blocks
+  // startup when offline — the free-profile card in Add Profile can add it.
+  await _safeInit("default vpn profile", () async {
+    const seededKey = "bigt.vpn.seeded";
+    final prefs = container.read(sharedPreferencesProvider).requireValue;
+    if (prefs.getBool(seededKey) ?? false) return;
+    if (await container.read(hasAnyProfileProvider.future)) return;
+    final repo = container.read(profileRepositoryProvider).requireValue;
+    final result = await repo
+        .upsertRemote(
+          Constants.vpnSubscriptionUrl,
+          userOverride: const UserOverride(name: Constants.vpnProfileName, updateInterval: 12),
+        )
+        .run();
+    if (result.isRight()) {
+      await prefs.setBool(seededKey, true);
+      Logger.bootstrap.info("default vpn profile added");
+    } else {
+      Logger.bootstrap.warning("default vpn profile failed");
+    }
+  }, timeout: 20000);
 
   // Eagerly listen to activeProxyNotifierProvider to force synchronous evaluation in microtasks,
   // avoiding lazy build-phase flushes and sibling dependency collisions on the Home page.
