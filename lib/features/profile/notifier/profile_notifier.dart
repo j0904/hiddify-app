@@ -255,10 +255,7 @@ class FreeProfilesNotifier extends _$FreeProfilesNotifier with AppLogger {
 
   @override
   Future<List<FreeProfile>> build() async {
-    final lists = await Future.wait([
-      _download(Constants.vpnFreeProfilesUrl),
-      _download(_url),
-    ]);
+    final lists = await Future.wait([_download(Constants.vpnFreeProfilesUrl), _download(_url)]);
     return [...lists[0], ...lists[1]];
   }
 
